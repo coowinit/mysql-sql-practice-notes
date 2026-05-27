@@ -1,0 +1,1768 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MySQL SQL 练习笔记：商城数据表实战</title>
+  <style>
+    :root {
+      --bg: #f3f6fb;
+      --card: #ffffff;
+      --text: #172033;
+      --muted: #69758a;
+      --border: #e5eaf2;
+      --primary: #2563eb;
+      --primary-soft: #eaf1ff;
+      --code-bg: #101827;
+      --code-text: #e7eefc;
+      --shadow: 0 16px 40px rgba(15, 23, 42, .08);
+      --radius: 18px;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: radial-gradient(circle at top left, #eaf1ff 0, transparent 34%), var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
+      line-height: 1.6;
+    }
+    a { color: inherit; text-decoration: none; }
+    .page { max-width: 1180px; margin: 0 auto; padding: 28px 20px 70px; }
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 330px;
+      gap: 18px;
+      align-items: stretch;
+      margin-bottom: 18px;
+    }
+    .hero-main, .hero-side, .content-card {
+      background: rgba(255,255,255,.9);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+    .hero-main { padding: 28px; }
+    .hero-main h1 { margin: 0 0 10px; font-size: 32px; line-height: 1.2; }
+    .hero-main p { margin: 0; color: var(--muted); font-size: 15px; }
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+    .chip {
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: var(--primary-soft);
+      color: #1d4ed8;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .hero-side { padding: 20px; display: grid; gap: 12px; align-content: center; }
+    .stat { padding: 14px; border-radius: 14px; background: #f8fbff; border: 1px solid var(--border); }
+    .stat strong { display:block; font-size: 22px; }
+    .stat span { color: var(--muted); font-size: 13px; }
+    .layout { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 18px; align-items: start; }
+    .sidebar { position: sticky; top: 18px; display: grid; gap: 12px; }
+    .content-card { padding: 16px; }
+    .content-card h2 { margin: 0 0 12px; font-size: 16px; }
+    .nav { display: grid; gap: 6px; max-height: calc(100vh - 220px); overflow: auto; padding-right: 4px; }
+    .nav a { padding: 9px 10px; border-radius: 10px; color: var(--muted); font-size: 13px; }
+    .nav a:hover { background: var(--primary-soft); color: var(--primary); }
+    .search-input { width: 100%; border: 1px solid var(--border); border-radius: 12px; padding: 12px 13px; outline: none; font-size: 14px; }
+    .search-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,.12); }
+    .main { display: grid; gap: 16px; }
+    .section-title { margin: 16px 0 0; padding: 20px 4px 4px; }
+    .section-title p { margin: 0 0 4px; color: var(--primary); font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; }
+    .section-title h2 { margin: 0; font-size: 22px; }
+    .sql-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .card-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 20px 20px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .badge { display: inline-flex; align-items:center; padding: 4px 9px; border-radius: 999px; background: var(--primary-soft); color: var(--primary); font-size: 12px; font-weight: 800; }
+    .card-head h3 { margin: 10px 0 0; font-size: 20px; }
+    .desc { margin: 7px 0 0; color: var(--muted); font-size: 14px; }
+    .copy-btn {
+      flex: 0 0 auto;
+      height: 36px;
+      padding: 0 13px;
+      border: 0;
+      border-radius: 10px;
+      background: var(--text);
+      color: #fff;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .copy-btn:hover { opacity: .88; }
+    pre { margin: 0; padding: 18px 20px; overflow: auto; background: var(--code-bg); color: var(--code-text); font-size: 13px; line-height: 1.65; }
+    code { font-family: Consolas, Monaco, "Courier New", monospace; }
+    .screenshot { margin: 0; padding: 18px 20px 20px; background: #fbfdff; }
+    .shot-placeholder {
+      min-height: 180px;
+      border: 1px dashed #b9c6dc;
+      border-radius: 14px;
+      background: repeating-linear-gradient(45deg, #f5f8fc, #f5f8fc 10px, #eef3fb 10px, #eef3fb 20px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 8px;
+      color: var(--muted);
+      text-align: center;
+      padding: 18px;
+    }
+    .shot-placeholder strong { color: var(--text); }
+    .shot-placeholder span { font-family: Consolas, Monaco, "Courier New", monospace; font-size: 13px; }
+    .screenshot img { display: block; width: 100%; border-radius: 14px; border: 1px solid var(--border); }
+    figcaption { margin-top: 10px; color: var(--muted); font-size: 13px; }
+    .exercise-list { padding: 20px 24px 24px; }
+    .exercise-list li { margin: 8px 0; }
+    .footer-note { color: var(--muted); font-size: 13px; padding: 16px 4px; }
+    mark { background: #fef3c7; color: inherit; padding: 0 2px; border-radius: 3px; }
+    @media (max-width: 980px) {
+      .hero { grid-template-columns: 1fr; }
+      .layout { grid-template-columns: 1fr; }
+      .sidebar { position: static; }
+      .nav { max-height: none; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+    }
+    @media (max-width: 620px) {
+      .page { padding: 16px 12px 46px; }
+      .hero-main { padding: 22px; }
+      .hero-main h1 { font-size: 25px; }
+      .card-head { flex-direction: column; }
+      .copy-btn { width: 100%; }
+      pre { font-size: 12px; padding: 15px; }
+      .screenshot { padding: 15px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="hero">
+      <div class="hero-main">
+        <h1>MySQL SQL 练习笔记：商城数据表实战</h1>
+        <p>一套基于简单商城业务场景的 MySQL SQL 练习资料，包含建库建表、测试数据、查询、聚合、JOIN、子查询、事务、视图和运行结果截图记录。</p>
+        <div class="chips">
+          <span class="chip">MySQL</span>
+          <span class="chip">SELECT / JOIN / GROUP BY</span>
+          <span class="chip">事务 / 视图 / 索引</span>
+          <span class="chip">运行截图记录</span>
+        </div>
+      </div>
+      <aside class="hero-side">
+        <div class="stat"><strong>60</strong><span>个 SQL 练习块</span></div>
+        <div class="stat"><strong>4</strong><span>张模拟业务表</span></div>
+        <div class="stat"><strong>10</strong><span>道自测题</span></div>
+      </aside>
+    </header>
+
+    <div class="layout">
+      <aside class="sidebar">
+        <div class="content-card">
+          <h2>快速搜索</h2>
+          <input id="search" class="search-input" type="search" placeholder="搜索 SELECT、JOIN、客户、订单..." />
+        </div>
+        <div class="content-card">
+          <h2>练习目录</h2>
+          <nav class="nav">
+            <a href="#section-01">第 1 部分 · 创建练习数据库</a><a href="#section-02">第 2 部分 · 创建数据表</a><a href="#section-03">第 3 部分 · 插入测试数据</a><a href="#section-04">第 4 部分 · 基础查询 SELECT</a><a href="#section-05">第 5 部分 · 条件查询 WHERE</a><a href="#section-06">第 6 部分 · 排序 ORDER BY</a><a href="#section-07">第 7 部分 · 聚合函数 COUNT / SUM / AVG / MAX / MIN</a><a href="#section-08">第 8 部分 · 分组 GROUP BY</a><a href="#section-09">第 9 部分 · HAVING 分组后筛选</a><a href="#section-10">第 10 部分 · 单表 INSERT / UPDATE / DELETE</a><a href="#section-11">第 11 部分 · 连接查询 JOIN</a><a href="#section-12">第 12 部分 · LEFT JOIN</a><a href="#section-13">第 13 部分 · 子查询 Subquery</a><a href="#section-14">第 14 部分 · CASE WHEN 条件判断</a><a href="#section-15">第 15 部分 · 日期函数</a><a href="#section-16">第 16 部分 · 常用业务查询综合练习</a><a href="#section-17">第 17 部分 · 索引练习</a><a href="#section-18">第 18 部分 · 事务练习 Transaction</a><a href="#section-19">第 19 部分 · 视图 View</a>
+            <a href="#section-20">第 20 部分 · 自己练习题</a>
+          </nav>
+        </div>
+      </aside>
+
+      <main class="main">
+        <section class="content-card">
+          <h2>使用说明</h2>
+          <p>先在 MySQL 中执行第 1-3 部分完成初始化，然后按编号逐条执行 SQL。每条 SQL 执行后，把截图保存到对应路径，例如 <code>docs/screenshots/04-01.png</code>，上传到 GitHub 后本页面会自动显示截图。</p>
+        </section>
+
+        <section class="section-title" id="section-01">
+  <p>Section 01</p>
+  <h2>第 1 部分：创建练习数据库</h2>
+</section><article class="sql-card" id="sql-01-01" data-title="1.1 创建练习数据库" data-section="1" data-tag="初始化">
+  <div class="card-head">
+    <div>
+      <span class="badge">1.1</span>
+      <h3>创建练习数据库</h3>
+      <p class="desc">创建并切换到练习数据库。</p>
+    </div>
+    <button class="copy-btn" type="button">复制 SQL</button>
+  </div>
+  <pre><code class="language-sql">DROP DATABASE IF EXISTS sql_practice_shop;
+CREATE DATABASE sql_practice_shop
+  DEFAULT CHARACTER SET utf8mb4
+  DEFAULT COLLATE utf8mb4_unicode_ci;
+
+USE sql_practice_shop;</code></pre>
+  <figure class="screenshot" data-path="docs/screenshots/01-01.png">
+    <div class="shot-placeholder">
+      <strong>运行结果截图待上传</strong>
+      <span>docs/screenshots/01-01.png</span>
+    </div>
+    <img src="docs/screenshots/01-01.png" alt="1.1 创建练习数据库 运行结果截图" loading="lazy" onerror="this.style.display='none'; this.previousElementSibling.style.display='flex';" onload="this.previousElementSibling.style.display='none';">
+    <figcaption>截图路径：<code>docs/screenshots/01-01.png</code></figcaption>
+  </figure>
+</article><section class="section-title" id="section-02">
+  <p>Section 02</p>
+  <h2>第 2 部分：创建数据表</h2>
+</section><article class="sql-card" id="sql-02-01" data-title="2.1 创建数据表" data-section="2" data-tag="初始化">
+  <div class="card-head">
+    <div>
+      <span class="badge">2.1</span>
+      <h3>创建数据表</h3>
+      <p class="desc">创建 customers、products、orders、order_items 四张练习表。</p>
+    </div>
+    <button class="copy-btn" type="button">复制 SQL</button>
+  </div>
+  <pre><code class="language-sql">-- 业务场景：一个简单商城
+-- customers   客户表
+-- products    产品表
+-- orders      订单表
+-- order_items 订单明细表
+
+DROP TABLE IF EXISTS order_items;
+DROP TABLE IF EXISTS orders;
+DROP TABLE IF EXISTS products;
+DROP TABLE IF EXISTS customers;
+
+CREATE TABLE customers (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  city VARCHAR(80) NOT NULL,
+  email VARCHAR(160) NOT NULL UNIQUE,
+  level ENUM(&#x27;normal&#x27;, &#x27;vip&#x27;) NOT NULL DEFAULT &#x27;normal&#x27;,
+  created_at DATE NOT NULL
+) ENGINE=InnoDB;
+
+CREATE TABLE products (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(120) NOT NULL,
+  category VARCHAR(80) NOT NULL,
+  price DECIMAL(10, 2) NOT NULL,
+  stock INT NOT NULL DEFAULT 0,
+  status ENUM(&#x27;active&#x27;, &#x27;inactive&#x27;) NOT NULL DEFAULT &#x27;active&#x27;
+) ENGINE=InnoDB;
+
+CREATE TABLE orders (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  customer_id INT NOT NULL,
+  order_no VARCHAR(40) NOT NULL UNIQUE,
+  status ENUM(&#x27;pending&#x27;, &#x27;paid&#x27;, &#x27;shipped&#x27;, &#x27;cancelled&#x27;) NOT NULL DEFAULT &#x27;pending&#x27;,
+  order_date DATE NOT NULL,
+  note VARCHAR(255),
+  CONSTRAINT fk_orders_customer
+    FOREIGN KEY (customer_id) REFERENCES customers(id)
+    ON UPDATE CASCADE
+    ON DELETE RESTRICT
+) ENGINE=InnoDB;
+
+CREATE TABLE order_items (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  order_id INT NOT NULL,
+  product_id INT NOT NULL,
+  quantity INT NOT NULL,
+  unit_price DECIMAL(10, 2) NOT NULL,
+  CONSTRAINT fk_order_items_order
+    FOREIGN KEY (order_id) REFERENCES orders(id)
+    ON UPDATE CASCADE
+    ON DELETE CASCADE,
+  CONSTRAINT fk_order_items_product
+    FOREIGN KEY (product_id) REFERENCES products(id)
+    ON UPDATE CASCADE
+    ON DELETE RESTRICT
+) ENGINE=InnoDB;</code></pre>
+  <figure class="screenshot" data-path="docs/screenshots/02-01.png">
+    <div class="shot-placeholder">
+      <strong>运行结果截图待上传</strong>
+      <span>docs/screenshots/02-01.png</span>
+    </div>
+    <img src="docs/screenshots/02-01.png" alt="2.1 创建数据表 运行结果截图" loading="lazy" onerror="this.style.display='none'; this.previousElementSibling.style.display='flex';" onload="this.previousElementSibling.style.display='none';">
+    <figcaption>截图路径：<code>docs/screenshots/02-01.png</code></figcaption>
+  </figure>
+</article><section class="section-title" id="section-03">
+  <p>Section 03</p>
+  <h2>第 3 部分：插入测试数据</h2>
+</section><article class="sql-card" id="sql-03-01" data-title="3.1 插入测试数据" data-section="3" data-tag="初始化">
+  <div class="card-head">
+    <div>
+      <span class="badge">3.1</span>
+      <h3>插入测试数据</h3>
+      <p class="desc">插入一批商城测试数据，后续 SELECT / JOIN / GROUP BY 都基于这些数据。</p>
+    </div>
+    <button class="copy-btn" type="button">复制 SQL</button>
+  </div>
+  <pre><code class="language-sql">INSERT INTO customers (name, city, email, level, created_at) VALUES
+(&#x27;Alice Wang&#x27;, &#x27;Toronto&#x27;, &#x27;alice@example.com&#x27;, &#x27;vip&#x27;, &#x27;2024-01-10&#x27;),
+(&#x27;Bob Chen&#x27;, &#x27;Vancouver&#x27;, &#x27;bob@example.com&#x27;, &#x27;normal&#x27;, &#x27;2024-02-15&#x27;),
+(&#x27;Cindy Li&#x27;, &#x27;Montreal&#x27;, &#x27;cindy@example.com&#x27;, &#x27;vip&#x27;, &#x27;2024-03-20&#x27;),
+(&#x27;David Zhang&#x27;, &#x27;Calgary&#x27;, &#x27;david@example.com&#x27;, &#x27;normal&#x27;, &#x27;2024-04-05&#x27;),
+(&#x27;Eva Liu&#x27;, &#x27;Toronto&#x27;, &#x27;eva@example.com&#x27;, &#x27;normal&#x27;, &#x27;2024-04-18&#x27;),
+(&#x27;Frank Sun&#x27;, &#x27;Ottawa&#x27;, &#x27;frank@example.com&#x27;, &#x27;vip&#x27;, &#x27;2024-05-01&#x27;);
+
+INSERT INTO products (name, category, price, stock, status) VALUES
+(&#x27;Composite Decking Board&#x27;, &#x27;Decking&#x27;, 29.90, 500, &#x27;active&#x27;),
+(&#x27;Decking Starter Clip&#x27;, &#x27;Accessories&#x27;, 0.45, 3000, &#x27;active&#x27;),
+(&#x27;Decking Joist&#x27;, &#x27;Substructure&#x27;, 12.50, 800, &#x27;active&#x27;),
+(&#x27;Wall Cladding Panel&#x27;, &#x27;Cladding&#x27;, 35.80, 260, &#x27;active&#x27;),
+(&#x27;Corner Trim&#x27;, &#x27;Accessories&#x27;, 8.90, 600, &#x27;active&#x27;),
+(&#x27;Old Sample Board&#x27;, &#x27;Sample&#x27;, 3.00, 0, &#x27;inactive&#x27;),
+(&#x27;Fascia Board&#x27;, &#x27;Decking&#x27;, 18.60, 180, &#x27;active&#x27;),
+(&#x27;Screw Pack&#x27;, &#x27;Accessories&#x27;, 6.50, 1200, &#x27;active&#x27;);
+
+INSERT INTO orders (customer_id, order_no, status, order_date, note) VALUES
+(1, &#x27;SO20240501001&#x27;, &#x27;paid&#x27;, &#x27;2024-05-01&#x27;, &#x27;VIP customer&#x27;),
+(2, &#x27;SO20240503001&#x27;, &#x27;pending&#x27;, &#x27;2024-05-03&#x27;, NULL),
+(3, &#x27;SO20240505001&#x27;, &#x27;shipped&#x27;, &#x27;2024-05-05&#x27;, &#x27;Urgent delivery&#x27;),
+(1, &#x27;SO20240510001&#x27;, &#x27;cancelled&#x27;, &#x27;2024-05-10&#x27;, &#x27;Customer changed plan&#x27;),
+(5, &#x27;SO20240512001&#x27;, &#x27;paid&#x27;, &#x27;2024-05-12&#x27;, NULL),
+(6, &#x27;SO20240515001&#x27;, &#x27;paid&#x27;, &#x27;2024-05-15&#x27;, &#x27;Repeat customer&#x27;),
+(4, &#x27;SO20240518001&#x27;, &#x27;shipped&#x27;, &#x27;2024-05-18&#x27;, NULL),
+(3, &#x27;SO20240520001&#x27;, &#x27;paid&#x27;, &#x27;2024-05-20&#x27;, NULL);
+
+INSERT INTO order_items (order_id, product_id, quantity, unit_price) VALUES
+(1, 1, 20, 29.90),
+(1, 2, 200, 0.45),
+(1, 8, 5, 6.50),
+
+(2, 4, 10, 35.80),
+(2, 5, 8, 8.90),
+
+(3, 1, 30, 29.90),
+(3, 3, 12, 12.50),
+(3, 2, 300, 0.45),
+
+(4, 6, 5, 3.00),
+
+(5, 7, 15, 18.60),
+(5, 8, 3, 6.50),
+
+(6, 4, 12, 35.80),
+(6, 5, 10, 8.90),
+(6, 8, 2, 6.50),
+
+(7, 1, 25, 29.90),
+(7, 3, 10, 12.50),
+
+(8, 1, 10, 29.90),
+(8, 4, 6, 35.80),
+(8, 5, 4, 8.90);</code></pre>
+  <figure class="screenshot" data-path="docs/screenshots/03-01.png">
+    <div class="shot-placeholder">
+      <strong>运行结果截图待上传</strong>
+      <span>docs/screenshots/03-01.png</span>
+    </div>
+    <img src="docs/screenshots/03-01.png" alt="3.1 插入测试数据 运行结果截图" loading="lazy" onerror="this.style.display='none'; this.previousElementSibling.style.display='flex';" onload="this.previousElementSibling.style.display='none';">
+    <figcaption>截图路径：<code>docs/screenshots/03-01.png</code></figcaption>
+  </figure>
+</article><section class="section-title" id="section-04">
+  <p>Section 04</p>
+  <h2>第 4 部分：基础查询 SELECT</h2>
+</section><article class="sql-card" id="sql-04-01" data-title="4.1 查看所有客户" data-section="4" data-tag="基础查询 SELECT">
+  <div class="card-head">
+    <div>
+      <span class="badge">4.1</span>
+      <h3>查看所有客户</h3>
+      
+    </div>
+    <button class="copy-btn" type="button">复制 SQL</button>
+  </div>
+  <pre><code class="language-sql">SELECT *
+FROM customers;</code></pre>
+  <figure class="screenshot" data-path="docs/screenshots/04-01.png">
+    <div class="shot-placeholder">
+      <strong>运行结果截图待上传</strong>
+      <span>docs/screenshots/04-01.png</span>
+    </div>
+    <img src="docs/screenshots/04-01.png" alt="4.1 查看所有客户 运行结果截图" loading="lazy" onerror="this.style.display='none'; this.previousElementSibling.style.display='flex';" onload="this.previousElementSibling.style.display='none';">
+    <figcaption>截图路径：<code>docs/screenshots/04-01.png</code></figcaption>
+  </figure>
+</article><article class="sql-card" id="sql-04-02" data-title="4.2 只查询客户姓名、城市、邮箱" data-section="4" data-tag="基础查询 SELECT">
+  <div class="card-head">
+    <div>
+      <span class="badge">4.2</span>
+      <h3>只查询客户姓名、城市、邮箱</h3>
+      
+    </div>
+    <button class="copy-btn" type="button">复制 SQL</button>
+  </div>
+  <pre><code class="language-sql">SELECT name, city, email
+FROM customers;</code></pre>
+  <figure class="screenshot" data-path="docs/screenshots/04-02.png">
+    <div class="shot-placeholder">
+      <strong>运行结果截图待上传</strong>
+      <span>docs/screenshots/04-02.png</span>
+    </div>
+    <img src="docs/screenshots/04-02.png" alt="4.2 只查询客户姓名、城市、邮箱 运行结果截图" loading="lazy" onerror="this.style.display='none'; this.previousElementSibling.style.display='flex';" onload="this.previousElementSibling.style.display='none';">
+    <figcaption>截图路径：<code>docs/screenshots/04-02.png</code></figcaption>
+  </figure>
+</article><article class="sql-card" id="sql-04-03" data-title="4.3 查询产品名称、分类、价格，并给字段起别名" data-section="4" data-tag="基础查询 SELECT">
+  <div class="card-head">
+    <div>
+      <span class="badge">4.3</span>
+      <h3>查询产品名称、分类、价格，并给字段起别名</h3>
+      
+    </div>
+    <button class="copy-btn" type="button">复制 SQL</button>
+  </div>
+  <pre><code class="language-sql">SELECT
+  name AS product_name,
+  category AS product_category,
+  price AS unit_price
+FROM products;</code></pre>
+  <figure class="screenshot" data-path="docs/screenshots/04-03.png">
+    <div class="shot-placeholder">
+      <strong>运行结果截图待上传</strong>
+      <span>docs/screenshots/04-03.png</span>
+    </div>
+    <img src="docs/screenshots/04-03.png" alt="4.3 查询产品名称、分类、价格，并给字段起别名 运行结果截图" loading="lazy" onerror="this.style.display='none'; this.previousElementSibling.style.display='flex';" onload="this.previousElementSibling.style.display='none';">
+    <figcaption>截图路径：<code>docs/screenshots/04-03.png</code></figcaption>
+  </figure>
+</article><article class="sql-card" id="sql-04-04" data-title="4.4 查询前 5 个产品" data-section="4" data-tag="基础查询 SELECT">
+  <div class="card-head">
+    <div>
+      <span class="badge">4.4</span>
+      <h3>查询前 5 个产品</h3>
+      
+    </div>
+    <button class="copy-btn" type="button">复制 SQL</button>
+  </div>
+  <pre><code class="language-sql">SELECT *
+FROM products
+LIMIT 5;</code></pre>
+  <figure class="screenshot" data-path="docs/screenshots/04-04.png">
+    <div class="shot-placeholder">
+      <strong>运行结果截图待上传</strong>
+      <span>docs/screenshots/04-04.png</span>
+    </div>
+    <img src="docs/screenshots/04-04.png" alt="4.4 查询前 5 个产品 运行结果截图" loading="lazy" onerror="this.style.display='none'; this.previousElementSibling.style.display='flex';" onload="this.previousElementSibling.style.display='none';">
+    <figcaption>截图路径：<code>docs/screenshots/04-04.png</code></figcaption>
+  </figure>
+</article><section class="section-title" id="section-05">
+  <p>Section 05</p>
+  <h2>第 5 部分：条件查询 WHERE</h2>
+</section><article class="sql-card" id="sql-05-01" data-title="5.1 查询 Toronto 的客户" data-section="5" data-tag="条件查询 WHERE">
+  <div class="card-head">
+    <div>
+      <span class="badge">5.1</span>
+      <h3>查询 Toronto 的客户</h3>
+      
+    </div>
+    <button class="copy-btn" type="button">复制 SQL</button>
+  </div>
+  <pre><code class="language-sql">SELECT *
+FROM customers
+WHERE city = &#x27;Toronto&#x27;;</code></pre>
+  <figure class="screenshot" data-path="docs/screenshots/05-01.png">
+    <div class="shot-placeholder">
+      <strong>运行结果截图待上传</strong>
+      <span>docs/screenshots/05-01.png</span>
+    </div>
+    <img src="docs/screenshots/05-01.png" alt="5.1 查询 Toronto 的客户 运行结果截图" loading="lazy" onerror="this.style.display='none'; this.previousElementSibling.style.display='flex';" onload="this.previousElementSibling.style.display='none';">
+    <figcaption>截图路径：<code>docs/screenshots/05-01.png</code></figcaption>
+  </figure>
+</article><article class="sql-card" id="sql-05-02" data-title="5.2 查询 VIP 客户" data-section="5" data-tag="条件查询 WHERE">
+  <div class="card-head">
+    <div>
+      <span class="badge">5.2</span>
+      <h3>查询 VIP 客户</h3>
+      
+    </div>
+    <button class="copy-btn" type="button">复制 SQL</button>
+  </div>
+  <pre><code class="language-sql">SELECT *
+FROM customers
+WHERE level = &#x27;vip&#x27;;</code></pre>
+  <figure class="screenshot" data-path="docs/screenshots/05-02.png">
+    <div class="shot-placeholder">
+      <strong>运行结果截图待上传</strong>
+      <span>docs/screenshots/05-02.png</span>
+    </div>
+    <img src="docs/screenshots/05-02.png" alt="5.2 查询 VIP 客户 运行结果截图" loading="lazy" onerror="this.style.display='none'; this.previousElementSibling.style.display='flex';" onload="this.previousElementSibling.style.display='none';">
+    <figcaption>截图路径：<code>docs/screenshots/05-02.png</code></figcaption>
+  </figure>
+</article><article class="sql-card" id="sql-05-03" data-title="5.3 查询价格大于 20 的产品" data-section="5" data-tag="条件查询 WHERE">
+  <div class="card-head">
+    <div>
+      <span class="badge">5.3</span>
+      <h3>查询价格大于 20 的产品</h3>
+      
+    </div>
+    <button class="copy-btn" type="button">复制 SQL</button>
+  </div>
+  <pre><code class="language-sql">SELECT *
+FROM products
+WHERE price &gt; 20;</code></pre>
+  <figure class="screenshot" data-path="docs/screenshots/05-03.png">
+    <div class="shot-placeholder">
+      <strong>运行结果截图待上传</strong>
+      <span>docs/screenshots/05-03.png</span>
+    </div>
+    <img src="docs/screenshots/05-03.png" alt="5.3 查询价格大于 20 的产品 运行结果截图" loading="lazy" onerror="this.style.display='none'; this.previousElementSibling.style.display='flex';" onload="this.previousElementSibling.style.display='none';">
+    <figcaption>截图路径：<code>docs/screenshots/05-03.png</code></figcaption>
+  </figure>
+</article><article class="sql-card" id="sql-05-04" data-title="5.4 查询库存大于 0 且状态为 active 的产品" data-section="5" data-tag="条件查询 WHERE">
+  <div class="card-head">
+    <div>
+      <span class="badge">5.4</span>
+      <h3>查询库存大于 0 且状态为 active 的产品</h3>
+      
+    </div>
+    <button class="copy-btn" type="button">复制 SQL</button>
+  </div>
+  <pre><code class="language-sql">SELECT *
+FROM products
+WHERE stock &gt; 0
+  AND status = &#x27;active&#x27;;</code></pre>
+  <figure class="screenshot" data-path="docs/screenshots/05-04.png">
+    <div class="shot-placeholder">
+      <strong>运行结果截图待上传</strong>
+      <span>docs/screenshots/05-04.png</span>
+    </div>
+    <img src="docs/screenshots/05-04.png" alt="5.4 查询库存大于 0 且状态为 active 的产品 运行结果截图" loading="lazy" onerror="this.style.display='none'; this.previousElementSibling.style.display='flex';" onload="this.previousElementSibling.style.display='none';">
+    <figcaption>截图路径：<code>docs/screenshots/05-04.png</code></figcaption>
+  </figure>
+</article><article class="sql-card" id="sql-05-05" data-title="5.5 查询 Decking 或 Accessories 分类的产品" data-section="5" data-tag="条件查询 WHERE">
+  <div class="card-head">
+    <div>
+      <span class="badge">5.5</span>
+      <h3>查询 Decking 或 Accessories 分类的产品</h3>
+      
+    </div>
+    <button class="copy-btn" type="button">复制 SQL</button>
+  </div>
+  <pre><code class="language-sql">SELECT *
+FROM products
+WHERE category IN (&#x27;Decking&#x27;, &#x27;Accessories&#x27;);</code></pre>
+  <figure class="screenshot" data-path="docs/screenshots/05-05.png">
+    <div class="shot-placeholder">
+      <strong>运行结果截图待上传</strong>
+      <span>docs/screenshots/05-05.png</span>
+    </div>
+    <img src="docs/screenshots/05-05.png" alt="5.5 查询 Decking 或 Accessories 分类的产品 运行结果截图" loading="lazy" onerror="this.style.display='none'; this.previousElementSibling.style.display='flex';" onload="this.previousElementSibling.style.display='none';">
+    <figcaption>截图路径：<code>docs/screenshots/05-05.png</code></figcaption>
+  </figure>
+</article><article class="sql-card" id="sql-05-06" data-title="5.6 模糊查询：查询名称中包含 Board 的产品" data-section="5" data-tag="条件查询 WHERE">
+  <div class="card-head">
+    <div>
+      <span class="badge">5.6</span>
+      <h3>模糊查询：查询名称中包含 Board 的产品</h3>
+      
+    </div>
+    <button class="copy-btn" type="button">复制 SQL</button>
+  </div>
+  <pre><code class="language-sql">SELECT *
+FROM products
+WHERE name LIKE &#x27;%Board%&#x27;;</code></pre>
+  <figure class="screenshot" data-path="docs/screenshots/05-06.png">
+    <div class="shot-placeholder">
+      <strong>运行结果截图待上传</strong>
+      <span>docs/screenshots/05-06.png</span>
+    </div>
+    <img src="docs/screenshots/05-06.png" alt="5.6 模糊查询：查询名称中包含 Board 的产品 运行结果截图" loading="lazy" onerror="this.style.display='none'; this.previousElementSibling.style.display='flex';" onload="this.previousElementSibling.style.display='none';">
+    <figcaption>截图路径：<code>docs/screenshots/05-06.png</code></figcaption>
+  </figure>
+</article><article class="sql-card" id="sql-05-07" data-title="5.7 查询 2024-05-10 之后的订单" data-section="5" data-tag="条件查询 WHERE">
+  <div class="card-head">
+    <div>
+      <span class="badge">5.7</span>
+      <h3>查询 2024-05-10 之后的订单</h3>
+      
+    </div>
+    <button class="copy-btn" type="button">复制 SQL</button>
+  </div>
+  <pre><code class="language-sql">SELECT *
+FROM orders
+WHERE order_date &gt; &#x27;2024-05-10&#x27;;</code></pre>
+  <figure class="screenshot" data-path="docs/screenshots/05-07.png">
+    <div class="shot-placeholder">
+      <strong>运行结果截图待上传</strong>
+      <span>docs/screenshots/05-07.png</span>
+    </div>
+    <img src="docs/screenshots/05-07.png" alt="5.7 查询 2024-05-10 之后的订单 运行结果截图" loading="lazy" onerror="this.style.display='none'; this.previousElementSibling.style.display='flex';" onload="this.previousElementSibling.style.display='none';">
+    <figcaption>截图路径：<code>docs/screenshots/05-07.png</code></figcaption>
+  </figure>
+</article><section class="section-title" id="section-06">
+  <p>Section 06</p>
+  <h2>第 6 部分：排序 ORDER BY</h2>
+</section><article class="sql-card" id="sql-06-01" data-title="6.1 产品按价格从低到高排序" data-section="6" data-tag="排序 ORDER BY">
+  <div class="card-head">
+    <div>
+      <span class="badge">6.1</span>
+      <h3>产品按价格从低到高排序</h3>
+      
+    </div>
+    <button class="copy-btn" type="button">复制 SQL</button>
+  </div>
+  <pre><code class="language-sql">SELECT *
+FROM products
+ORDER BY price ASC;</code></pre>
+  <figure class="screenshot" data-path="docs/screenshots/06-01.png">
+    <div class="shot-placeholder">
+      <strong>运行结果截图待上传</strong>
+      <span>docs/screenshots/06-01.png</span>
+    </div>
+    <img src="docs/screenshots/06-01.png" alt="6.1 产品按价格从低到高排序 运行结果截图" loading="lazy" onerror="this.style.display='none'; this.previousElementSibling.style.display='flex';" onload="this.previousElementSibling.style.display='none';">
+    <figcaption>截图路径：<code>docs/screenshots/06-01.png</code></figcaption>
+  </figure>
+</article><article class="sql-card" id="sql-06-02" data-title="6.2 产品按库存从高到低排序" data-section="6" data-tag="排序 ORDER BY">
+  <div class="card-head">
+    <div>
+      <span class="badge">6.2</span>
+      <h3>产品按库存从高到低排序</h3>
+      
+    </div>
+    <button class="copy-btn" type="button">复制 SQL</button>
+  </div>
+  <pre><code class="language-sql">SELECT *
+FROM products
+ORDER BY stock DESC;</code></pre>
+  <figure class="screenshot" data-path="docs/screenshots/06-02.png">
+    <div class="shot-placeholder">
+      <strong>运行结果截图待上传</strong>
+      <span>docs/screenshots/06-02.png</span>
+    </div>
+    <img src="docs/screenshots/06-02.png" alt="6.2 产品按库存从高到低排序 运行结果截图" loading="lazy" onerror="this.style.display='none'; this.previousElementSibling.style.display='flex';" onload="this.previousElementSibling.style.display='none';">
+    <figcaption>截图路径：<code>docs/screenshots/06-02.png</code></figcaption>
+  </figure>
+</article><article class="sql-card" id="sql-06-03" data-title="6.3 订单先按状态排序，再按日期倒序排序" data-section="6" data-tag="排序 ORDER BY">
+  <div class="card-head">
+    <div>
+      <span class="badge">6.3</span>
+      <h3>订单先按状态排序，再按日期倒序排序</h3>
+      
+    </div>
+    <button class="copy-btn" type="button">复制 SQL</button>
+  </div>
+  <pre><code class="language-sql">SELECT *
+FROM orders
+ORDER BY status ASC, order_date DESC;</code></pre>
+  <figure class="screenshot" data-path="docs/screenshots/06-03.png">
+    <div class="shot-placeholder">
+      <strong>运行结果截图待上传</strong>
+      <span>docs/screenshots/06-03.png</span>
+    </div>
+    <img src="docs/screenshots/06-03.png" alt="6.3 订单先按状态排序，再按日期倒序排序 运行结果截图" loading="lazy" onerror="this.style.display='none'; this.previousElementSibling.style.display='flex';" onload="this.previousElementSibling.style.display='none';">
+    <figcaption>截图路径：<code>docs/screenshots/06-03.png</code></figcaption>
+  </figure>
+</article><section class="section-title" id="section-07">
+  <p>Section 07</p>
+  <h2>第 7 部分：聚合函数 COUNT / SUM / AVG / MAX / MIN</h2>
+</section><article class="sql-card" id="sql-07-01" data-title="7.1 统计客户总数" data-section="7" data-tag="聚合函数 COUNT / SUM / AVG / MAX / MIN">
+  <div class="card-head">
+    <div>
+      <span class="badge">7.1</span>
+      <h3>统计客户总数</h3>
+      
+    </div>
+    <button class="copy-btn" type="button">复制 SQL</button>
+  </div>
+  <pre><code class="language-sql">SELECT COUNT(*) AS customer_count
+FROM customers;</code></pre>
+  <figure class="screenshot" data-path="docs/screenshots/07-01.png">
+    <div class="shot-placeholder">
+      <strong>运行结果截图待上传</strong>
+      <span>docs/screenshots/07-01.png</span>
+    </div>
+    <img src="docs/screenshots/07-01.png" alt="7.1 统计客户总数 运行结果截图" loading="lazy" onerror="this.style.display='none'; this.previousElementSibling.style.display='flex';" onload="this.previousElementSibling.style.display='none';">
+    <figcaption>截图路径：<code>docs/screenshots/07-01.png</code></figcaption>
+  </figure>
+</article><article class="sql-card" id="sql-07-02" data-title="7.2 统计产品平均价格" data-section="7" data-tag="聚合函数 COUNT / SUM / AVG / MAX / MIN">
+  <div class="card-head">
+    <div>
+      <span class="badge">7.2</span>
+      <h3>统计产品平均价格</h3>
+      
+    </div>
+    <button class="copy-btn" type="button">复制 SQL</button>
+  </div>
+  <pre><code class="language-sql">SELECT AVG(price) AS average_price
+FROM products;</code></pre>
+  <figure class="screenshot" data-path="docs/screenshots/07-02.png">
+    <div class="shot-placeholder">
+      <strong>运行结果截图待上传</strong>
+      <span>docs/screenshots/07-02.png</span>
+    </div>
+    <img src="docs/screenshots/07-02.png" alt="7.2 统计产品平均价格 运行结果截图" loading="lazy" onerror="this.style.display='none'; this.previousElementSibling.style.display='flex';" onload="this.previousElementSibling.style.display='none';">
+    <figcaption>截图路径：<code>docs/screenshots/07-02.png</code></figcaption>
+  </figure>
+</article><article class="sql-card" id="sql-07-03" data-title="7.3 查询最高产品价格和最低产品价格" data-section="7" data-tag="聚合函数 COUNT / SUM / AVG / MAX / MIN">
+  <div class="card-head">
+    <div>
+      <span class="badge">7.3</span>
+      <h3>查询最高产品价格和最低产品价格</h3>
+      
+    </div>
+    <button class="copy-btn" type="button">复制 SQL</button>
+  </div>
+  <pre><code class="language-sql">SELECT
+  MAX(price) AS max_price,
+  MIN(price) AS min_price
+FROM products;</code></pre>
+  <figure class="screenshot" data-path="docs/screenshots/07-03.png">
+    <div class="shot-placeholder">
+      <strong>运行结果截图待上传</strong>
+      <span>docs/screenshots/07-03.png</span>
+    </div>
+    <img src="docs/screenshots/07-03.png" alt="7.3 查询最高产品价格和最低产品价格 运行结果截图" loading="lazy" onerror="this.style.display='none'; this.previousElementSibling.style.display='flex';" onload="this.previousElementSibling.style.display='none';">
+    <figcaption>截图路径：<code>docs/screenshots/07-03.png</code></figcaption>
+  </figure>
+</article><article class="sql-card" id="sql-07-04" data-title="7.4 统计所有产品总库存" data-section="7" data-tag="聚合函数 COUNT / SUM / AVG / MAX / MIN">
+  <div class="card-head">
+    <div>
+      <span class="badge">7.4</span>
+      <h3>统计所有产品总库存</h3>
+      
+    </div>
+    <button class="copy-btn" type="button">复制 SQL</button>
+  </div>
+  <pre><code class="language-sql">SELECT SUM(stock) AS total_stock
+FROM products;</code></pre>
+  <figure class="screenshot" data-path="docs/screenshots/07-04.png">
+    <div class="shot-placeholder">
+      <strong>运行结果截图待上传</strong>
+      <span>docs/screenshots/07-04.png</span>
+    </div>
+    <img src="docs/screenshots/07-04.png" alt="7.4 统计所有产品总库存 运行结果截图" loading="lazy" onerror="this.style.display='none'; this.previousElementSibling.style.display='flex';" onload="this.previousElementSibling.style.display='none';">
+    <figcaption>截图路径：<code>docs/screenshots/07-04.png</code></figcaption>
+  </figure>
+</article><section class="section-title" id="section-08">
+  <p>Section 08</p>
+  <h2>第 8 部分：分组 GROUP BY</h2>
+</section><article class="sql-card" id="sql-08-01" data-title="8.1 按城市统计客户数量" data-section="8" data-tag="分组 GROUP BY">
+  <div class="card-head">
+    <div>
+      <span class="badge">8.1</span>
+      <h3>按城市统计客户数量</h3>
+      
+    </div>
+    <button class="copy-btn" type="button">复制 SQL</button>
+  </div>
+  <pre><code class="language-sql">SELECT
+  city,
+  COUNT(*) AS customer_count
+FROM customers
+GROUP BY city
+ORDER BY customer_count DESC;</code></pre>
+  <figure class="screenshot" data-path="docs/screenshots/08-01.png">
+    <div class="shot-placeholder">
+      <strong>运行结果截图待上传</strong>
+      <span>docs/screenshots/08-01.png</span>
+    </div>
+    <img src="docs/screenshots/08-01.png" alt="8.1 按城市统计客户数量 运行结果截图" loading="lazy" onerror="this.style.display='none'; this.previousElementSibling.style.display='flex';" onload="this.previousElementSibling.style.display='none';">
+    <figcaption>截图路径：<code>docs/screenshots/08-01.png</code></figcaption>
+  </figure>
+</article><article class="sql-card" id="sql-08-02" data-title="8.2 按产品分类统计产品数量" data-section="8" data-tag="分组 GROUP BY">
+  <div class="card-head">
+    <div>
+      <span class="badge">8.2</span>
+      <h3>按产品分类统计产品数量</h3>
+      
+    </div>
+    <button class="copy-btn" type="button">复制 SQL</button>
+  </div>
+  <pre><code class="language-sql">SELECT
+  category,
+  COUNT(*) AS product_count
+FROM products
+GROUP BY category
+ORDER BY product_count DESC;</code></pre>
+  <figure class="screenshot" data-path="docs/screenshots/08-02.png">
+    <div class="shot-placeholder">
+      <strong>运行结果截图待上传</strong>
+      <span>docs/screenshots/08-02.png</span>
+    </div>
+    <img src="docs/screenshots/08-02.png" alt="8.2 按产品分类统计产品数量 运行结果截图" loading="lazy" onerror="this.style.display='none'; this.previousElementSibling.style.display='flex';" onload="this.previousElementSibling.style.display='none';">
+    <figcaption>截图路径：<code>docs/screenshots/08-02.png</code></figcaption>
+  </figure>
+</article><article class="sql-card" id="sql-08-03" data-title="8.3 按订单状态统计订单数量" data-section="8" data-tag="分组 GROUP BY">
+  <div class="card-head">
+    <div>
+      <span class="badge">8.3</span>
+      <h3>按订单状态统计订单数量</h3>
+      
+    </div>
+    <button class="copy-btn" type="button">复制 SQL</button>
+  </div>
+  <pre><code class="language-sql">SELECT
+  status,
+  COUNT(*) AS order_count
+FROM orders
+GROUP BY status;</code></pre>
+  <figure class="screenshot" data-path="docs/screenshots/08-03.png">
+    <div class="shot-placeholder">
+      <strong>运行结果截图待上传</strong>
+      <span>docs/screenshots/08-03.png</span>
+    </div>
+    <img src="docs/screenshots/08-03.png" alt="8.3 按订单状态统计订单数量 运行结果截图" loading="lazy" onerror="this.style.display='none'; this.previousElementSibling.style.display='flex';" onload="this.previousElementSibling.style.display='none';">
+    <figcaption>截图路径：<code>docs/screenshots/08-03.png</code></figcaption>
+  </figure>
+</article><article class="sql-card" id="sql-08-04" data-title="8.4 按产品分类统计平均价格" data-section="8" data-tag="分组 GROUP BY">
+  <div class="card-head">
+    <div>
+      <span class="badge">8.4</span>
+      <h3>按产品分类统计平均价格</h3>
+      
+    </div>
+    <button class="copy-btn" type="button">复制 SQL</button>
+  </div>
+  <pre><code class="language-sql">SELECT
+  category,
+  AVG(price) AS average_price
+FROM products
+GROUP BY category
+ORDER BY average_price DESC;</code></pre>
+  <figure class="screenshot" data-path="docs/screenshots/08-04.png">
+    <div class="shot-placeholder">
+      <strong>运行结果截图待上传</strong>
+      <span>docs/screenshots/08-04.png</span>
+    </div>
+    <img src="docs/screenshots/08-04.png" alt="8.4 按产品分类统计平均价格 运行结果截图" loading="lazy" onerror="this.style.display='none'; this.previousElementSibling.style.display='flex';" onload="this.previousElementSibling.style.display='none';">
+    <figcaption>截图路径：<code>docs/screenshots/08-04.png</code></figcaption>
+  </figure>
+</article><section class="section-title" id="section-09">
+  <p>Section 09</p>
+  <h2>第 9 部分：HAVING 分组后筛选</h2>
+</section><article class="sql-card" id="sql-09-01" data-title="9.1 查询客户数量大于 1 的城市" data-section="9" data-tag="HAVING 分组后筛选">
+  <div class="card-head">
+    <div>
+      <span class="badge">9.1</span>
+      <h3>查询客户数量大于 1 的城市</h3>
+      
+    </div>
+    <button class="copy-btn" type="button">复制 SQL</button>
+  </div>
+  <pre><code class="language-sql">SELECT
+  city,
+  COUNT(*) AS customer_count
+FROM customers
+GROUP BY city
+HAVING COUNT(*) &gt; 1;</code></pre>
+  <figure class="screenshot" data-path="docs/screenshots/09-01.png">
+    <div class="shot-placeholder">
+      <strong>运行结果截图待上传</strong>
+      <span>docs/screenshots/09-01.png</span>
+    </div>
+    <img src="docs/screenshots/09-01.png" alt="9.1 查询客户数量大于 1 的城市 运行结果截图" loading="lazy" onerror="this.style.display='none'; this.previousElementSibling.style.display='flex';" onload="this.previousElementSibling.style.display='none';">
+    <figcaption>截图路径：<code>docs/screenshots/09-01.png</code></figcaption>
+  </figure>
+</article><article class="sql-card" id="sql-09-02" data-title="9.2 查询平均价格大于 10 的产品分类" data-section="9" data-tag="HAVING 分组后筛选">
+  <div class="card-head">
+    <div>
+      <span class="badge">9.2</span>
+      <h3>查询平均价格大于 10 的产品分类</h3>
+      
+    </div>
+    <button class="copy-btn" type="button">复制 SQL</button>
+  </div>
+  <pre><code class="language-sql">SELECT
+  category,
+  AVG(price) AS average_price
+FROM products
+GROUP BY category
+HAVING AVG(price) &gt; 10;</code></pre>
+  <figure class="screenshot" data-path="docs/screenshots/09-02.png">
+    <div class="shot-placeholder">
+      <strong>运行结果截图待上传</strong>
+      <span>docs/screenshots/09-02.png</span>
+    </div>
+    <img src="docs/screenshots/09-02.png" alt="9.2 查询平均价格大于 10 的产品分类 运行结果截图" loading="lazy" onerror="this.style.display='none'; this.previousElementSibling.style.display='flex';" onload="this.previousElementSibling.style.display='none';">
+    <figcaption>截图路径：<code>docs/screenshots/09-02.png</code></figcaption>
+  </figure>
+</article><section class="section-title" id="section-10">
+  <p>Section 10</p>
+  <h2>第 10 部分：单表 INSERT / UPDATE / DELETE</h2>
+</section><article class="sql-card" id="sql-10-01" data-title="10.1 新增一个客户" data-section="10" data-tag="单表 INSERT / UPDATE / DELETE">
+  <div class="card-head">
+    <div>
+      <span class="badge">10.1</span>
+      <h3>新增一个客户</h3>
+      
+    </div>
+    <button class="copy-btn" type="button">复制 SQL</button>
+  </div>
+  <pre><code class="language-sql">INSERT INTO customers (name, city, email, level, created_at)
+VALUES (&#x27;Grace Yang&#x27;, &#x27;Toronto&#x27;, &#x27;grace@example.com&#x27;, &#x27;normal&#x27;, CURDATE());</code></pre>
+  <figure class="screenshot" data-path="docs/screenshots/10-01.png">
+    <div class="shot-placeholder">
+      <strong>运行结果截图待上传</strong>
+      <span>docs/screenshots/10-01.png</span>
+    </div>
+    <img src="docs/screenshots/10-01.png" alt="10.1 新增一个客户 运行结果截图" loading="lazy" onerror="this.style.display='none'; this.previousElementSibling.style.display='flex';" onload="this.previousElementSibling.style.display='none';">
+    <figcaption>截图路径：<code>docs/screenshots/10-01.png</code></figcaption>
+  </figure>
+</article><article class="sql-card" id="sql-10-02" data-title="10.2 查看刚新增的客户" data-section="10" data-tag="单表 INSERT / UPDATE / DELETE">
+  <div class="card-head">
+    <div>
+      <span class="badge">10.2</span>
+      <h3>查看刚新增的客户</h3>
+      
+    </div>
+    <button class="copy-btn" type="button">复制 SQL</button>
+  </div>
+  <pre><code class="language-sql">SELECT *
+FROM customers
+WHERE email = &#x27;grace@example.com&#x27;;</code></pre>
+  <figure class="screenshot" data-path="docs/screenshots/10-02.png">
+    <div class="shot-placeholder">
+      <strong>运行结果截图待上传</strong>
+      <span>docs/screenshots/10-02.png</span>
+    </div>
+    <img src="docs/screenshots/10-02.png" alt="10.2 查看刚新增的客户 运行结果截图" loading="lazy" onerror="this.style.display='none'; this.previousElementSibling.style.display='flex';" onload="this.previousElementSibling.style.display='none';">
+    <figcaption>截图路径：<code>docs/screenshots/10-02.png</code></figcaption>
+  </figure>
+</article><article class="sql-card" id="sql-10-03" data-title="10.3 修改 Grace 的会员等级" data-section="10" data-tag="单表 INSERT / UPDATE / DELETE">
+  <div class="card-head">
+    <div>
+      <span class="badge">10.3</span>
+      <h3>修改 Grace 的会员等级</h3>
+      
+    </div>
+    <button class="copy-btn" type="button">复制 SQL</button>
+  </div>
+  <pre><code class="language-sql">UPDATE customers
+SET level = &#x27;vip&#x27;
+WHERE email = &#x27;grace@example.com&#x27;;</code></pre>
+  <figure class="screenshot" data-path="docs/screenshots/10-03.png">
+    <div class="shot-placeholder">
+      <strong>运行结果截图待上传</strong>
+      <span>docs/screenshots/10-03.png</span>
+    </div>
+    <img src="docs/screenshots/10-03.png" alt="10.3 修改 Grace 的会员等级 运行结果截图" loading="lazy" onerror="this.style.display='none'; this.previousElementSibling.style.display='flex';" onload="this.previousElementSibling.style.display='none';">
+    <figcaption>截图路径：<code>docs/screenshots/10-03.png</code></figcaption>
+  </figure>
+</article><article class="sql-card" id="sql-10-04" data-title="10.4 删除 Grace" data-section="10" data-tag="单表 INSERT / UPDATE / DELETE">
+  <div class="card-head">
+    <div>
+      <span class="badge">10.4</span>
+      <h3>删除 Grace</h3>
+      
+    </div>
+    <button class="copy-btn" type="button">复制 SQL</button>
+  </div>
+  <pre><code class="language-sql">DELETE FROM customers
+WHERE email = &#x27;grace@example.com&#x27;;</code></pre>
+  <figure class="screenshot" data-path="docs/screenshots/10-04.png">
+    <div class="shot-placeholder">
+      <strong>运行结果截图待上传</strong>
+      <span>docs/screenshots/10-04.png</span>
+    </div>
+    <img src="docs/screenshots/10-04.png" alt="10.4 删除 Grace 运行结果截图" loading="lazy" onerror="this.style.display='none'; this.previousElementSibling.style.display='flex';" onload="this.previousElementSibling.style.display='none';">
+    <figcaption>截图路径：<code>docs/screenshots/10-04.png</code></figcaption>
+  </figure>
+</article><section class="section-title" id="section-11">
+  <p>Section 11</p>
+  <h2>第 11 部分：连接查询 JOIN</h2>
+</section><article class="sql-card" id="sql-11-01" data-title="11.1 查询订单及对应客户信息" data-section="11" data-tag="连接查询 JOIN">
+  <div class="card-head">
+    <div>
+      <span class="badge">11.1</span>
+      <h3>查询订单及对应客户信息</h3>
+      
+    </div>
+    <button class="copy-btn" type="button">复制 SQL</button>
+  </div>
+  <pre><code class="language-sql">SELECT
+  o.id AS order_id,
+  o.order_no,
+  o.status,
+  o.order_date,
+  c.name AS customer_name,
+  c.city
+FROM orders o
+INNER JOIN customers c ON o.customer_id = c.id
+ORDER BY o.order_date DESC;</code></pre>
+  <figure class="screenshot" data-path="docs/screenshots/11-01.png">
+    <div class="shot-placeholder">
+      <strong>运行结果截图待上传</strong>
+      <span>docs/screenshots/11-01.png</span>
+    </div>
+    <img src="docs/screenshots/11-01.png" alt="11.1 查询订单及对应客户信息 运行结果截图" loading="lazy" onerror="this.style.display='none'; this.previousElementSibling.style.display='flex';" onload="this.previousElementSibling.style.display='none';">
+    <figcaption>截图路径：<code>docs/screenshots/11-01.png</code></figcaption>
+  </figure>
+</article><article class="sql-card" id="sql-11-02" data-title="11.2 查询订单明细，包括订单号、客户、产品、数量、单价" data-section="11" data-tag="连接查询 JOIN">
+  <div class="card-head">
+    <div>
+      <span class="badge">11.2</span>
+      <h3>查询订单明细，包括订单号、客户、产品、数量、单价</h3>
+      
+    </div>
+    <button class="copy-btn" type="button">复制 SQL</button>
+  </div>
+  <pre><code class="language-sql">SELECT
+  o.order_no,
+  c.name AS customer_name,
+  p.name AS product_name,
+  oi.quantity,
+  oi.unit_price
+FROM order_items oi
+INNER JOIN orders o ON oi.order_id = o.id
+INNER JOIN customers c ON o.customer_id = c.id
+INNER JOIN products p ON oi.product_id = p.id
+ORDER BY o.order_date DESC, o.order_no;</code></pre>
+  <figure class="screenshot" data-path="docs/screenshots/11-02.png">
+    <div class="shot-placeholder">
+      <strong>运行结果截图待上传</strong>
+      <span>docs/screenshots/11-02.png</span>
+    </div>
+    <img src="docs/screenshots/11-02.png" alt="11.2 查询订单明细，包括订单号、客户、产品、数量、单价 运行结果截图" loading="lazy" onerror="this.style.display='none'; this.previousElementSibling.style.display='flex';" onload="this.previousElementSibling.style.display='none';">
+    <figcaption>截图路径：<code>docs/screenshots/11-02.png</code></figcaption>
+  </figure>
+</article><article class="sql-card" id="sql-11-03" data-title="11.3 计算每条订单明细的小计金额" data-section="11" data-tag="连接查询 JOIN">
+  <div class="card-head">
+    <div>
+      <span class="badge">11.3</span>
+      <h3>计算每条订单明细的小计金额</h3>
+      
+    </div>
+    <button class="copy-btn" type="button">复制 SQL</button>
+  </div>
+  <pre><code class="language-sql">SELECT
+  o.order_no,
+  p.name AS product_name,
+  oi.quantity,
+  oi.unit_price,
+  oi.quantity * oi.unit_price AS line_total
+FROM order_items oi
+INNER JOIN orders o ON oi.order_id = o.id
+INNER JOIN products p ON oi.product_id = p.id;</code></pre>
+  <figure class="screenshot" data-path="docs/screenshots/11-03.png">
+    <div class="shot-placeholder">
+      <strong>运行结果截图待上传</strong>
+      <span>docs/screenshots/11-03.png</span>
+    </div>
+    <img src="docs/screenshots/11-03.png" alt="11.3 计算每条订单明细的小计金额 运行结果截图" loading="lazy" onerror="this.style.display='none'; this.previousElementSibling.style.display='flex';" onload="this.previousElementSibling.style.display='none';">
+    <figcaption>截图路径：<code>docs/screenshots/11-03.png</code></figcaption>
+  </figure>
+</article><article class="sql-card" id="sql-11-04" data-title="11.4 查询每个订单的总金额" data-section="11" data-tag="连接查询 JOIN">
+  <div class="card-head">
+    <div>
+      <span class="badge">11.4</span>
+      <h3>查询每个订单的总金额</h3>
+      
+    </div>
+    <button class="copy-btn" type="button">复制 SQL</button>
+  </div>
+  <pre><code class="language-sql">SELECT
+  o.order_no,
+  c.name AS customer_name,
+  o.status,
+  SUM(oi.quantity * oi.unit_price) AS order_total
+FROM orders o
+INNER JOIN customers c ON o.customer_id = c.id
+INNER JOIN order_items oi ON o.id = oi.order_id
+GROUP BY o.id, o.order_no, c.name, o.status
+ORDER BY order_total DESC;</code></pre>
+  <figure class="screenshot" data-path="docs/screenshots/11-04.png">
+    <div class="shot-placeholder">
+      <strong>运行结果截图待上传</strong>
+      <span>docs/screenshots/11-04.png</span>
+    </div>
+    <img src="docs/screenshots/11-04.png" alt="11.4 查询每个订单的总金额 运行结果截图" loading="lazy" onerror="this.style.display='none'; this.previousElementSibling.style.display='flex';" onload="this.previousElementSibling.style.display='none';">
+    <figcaption>截图路径：<code>docs/screenshots/11-04.png</code></figcaption>
+  </figure>
+</article><article class="sql-card" id="sql-11-05" data-title="11.5 查询已付款订单的总金额" data-section="11" data-tag="连接查询 JOIN">
+  <div class="card-head">
+    <div>
+      <span class="badge">11.5</span>
+      <h3>查询已付款订单的总金额</h3>
+      
+    </div>
+    <button class="copy-btn" type="button">复制 SQL</button>
+  </div>
+  <pre><code class="language-sql">SELECT
+  o.order_no,
+  c.name AS customer_name,
+  SUM(oi.quantity * oi.unit_price) AS order_total
+FROM orders o
+INNER JOIN customers c ON o.customer_id = c.id
+INNER JOIN order_items oi ON o.id = oi.order_id
+WHERE o.status = &#x27;paid&#x27;
+GROUP BY o.id, o.order_no, c.name
+ORDER BY order_total DESC;</code></pre>
+  <figure class="screenshot" data-path="docs/screenshots/11-05.png">
+    <div class="shot-placeholder">
+      <strong>运行结果截图待上传</strong>
+      <span>docs/screenshots/11-05.png</span>
+    </div>
+    <img src="docs/screenshots/11-05.png" alt="11.5 查询已付款订单的总金额 运行结果截图" loading="lazy" onerror="this.style.display='none'; this.previousElementSibling.style.display='flex';" onload="this.previousElementSibling.style.display='none';">
+    <figcaption>截图路径：<code>docs/screenshots/11-05.png</code></figcaption>
+  </figure>
+</article><section class="section-title" id="section-12">
+  <p>Section 12</p>
+  <h2>第 12 部分：LEFT JOIN</h2>
+</section><article class="sql-card" id="sql-12-01" data-title="12.1 查询所有客户，以及他们的订单数量" data-section="12" data-tag="LEFT JOIN">
+  <div class="card-head">
+    <div>
+      <span class="badge">12.1</span>
+      <h3>查询所有客户，以及他们的订单数量</h3>
+      
+    </div>
+    <button class="copy-btn" type="button">复制 SQL</button>
+  </div>
+  <pre><code class="language-sql">SELECT
+  c.id,
+  c.name,
+  c.city,
+  COUNT(o.id) AS order_count
+FROM customers c
+LEFT JOIN orders o ON c.id = o.customer_id
+GROUP BY c.id, c.name, c.city
+ORDER BY order_count DESC;</code></pre>
+  <figure class="screenshot" data-path="docs/screenshots/12-01.png">
+    <div class="shot-placeholder">
+      <strong>运行结果截图待上传</strong>
+      <span>docs/screenshots/12-01.png</span>
+    </div>
+    <img src="docs/screenshots/12-01.png" alt="12.1 查询所有客户，以及他们的订单数量 运行结果截图" loading="lazy" onerror="this.style.display='none'; this.previousElementSibling.style.display='flex';" onload="this.previousElementSibling.style.display='none';">
+    <figcaption>截图路径：<code>docs/screenshots/12-01.png</code></figcaption>
+  </figure>
+</article><article class="sql-card" id="sql-12-02" data-title="12.2 查询没有下过订单的客户" data-section="12" data-tag="LEFT JOIN">
+  <div class="card-head">
+    <div>
+      <span class="badge">12.2</span>
+      <h3>查询没有下过订单的客户</h3>
+      
+    </div>
+    <button class="copy-btn" type="button">复制 SQL</button>
+  </div>
+  <pre><code class="language-sql">SELECT
+  c.*
+FROM customers c
+LEFT JOIN orders o ON c.id = o.customer_id
+WHERE o.id IS NULL;</code></pre>
+  <figure class="screenshot" data-path="docs/screenshots/12-02.png">
+    <div class="shot-placeholder">
+      <strong>运行结果截图待上传</strong>
+      <span>docs/screenshots/12-02.png</span>
+    </div>
+    <img src="docs/screenshots/12-02.png" alt="12.2 查询没有下过订单的客户 运行结果截图" loading="lazy" onerror="this.style.display='none'; this.previousElementSibling.style.display='flex';" onload="this.previousElementSibling.style.display='none';">
+    <figcaption>截图路径：<code>docs/screenshots/12-02.png</code></figcaption>
+  </figure>
+</article><article class="sql-card" id="sql-12-03" data-title="12.3 查询所有产品，以及被购买的次数" data-section="12" data-tag="LEFT JOIN">
+  <div class="card-head">
+    <div>
+      <span class="badge">12.3</span>
+      <h3>查询所有产品，以及被购买的次数</h3>
+      
+    </div>
+    <button class="copy-btn" type="button">复制 SQL</button>
+  </div>
+  <pre><code class="language-sql">SELECT
+  p.id,
+  p.name,
+  p.category,
+  COUNT(oi.id) AS sold_line_count
+FROM products p
+LEFT JOIN order_items oi ON p.id = oi.product_id
+GROUP BY p.id, p.name, p.category
+ORDER BY sold_line_count DESC;</code></pre>
+  <figure class="screenshot" data-path="docs/screenshots/12-03.png">
+    <div class="shot-placeholder">
+      <strong>运行结果截图待上传</strong>
+      <span>docs/screenshots/12-03.png</span>
+    </div>
+    <img src="docs/screenshots/12-03.png" alt="12.3 查询所有产品，以及被购买的次数 运行结果截图" loading="lazy" onerror="this.style.display='none'; this.previousElementSibling.style.display='flex';" onload="this.previousElementSibling.style.display='none';">
+    <figcaption>截图路径：<code>docs/screenshots/12-03.png</code></figcaption>
+  </figure>
+</article><section class="section-title" id="section-13">
+  <p>Section 13</p>
+  <h2>第 13 部分：子查询 Subquery</h2>
+</section><article class="sql-card" id="sql-13-01" data-title="13.1 查询价格高于平均价格的产品" data-section="13" data-tag="子查询 Subquery">
+  <div class="card-head">
+    <div>
+      <span class="badge">13.1</span>
+      <h3>查询价格高于平均价格的产品</h3>
+      
+    </div>
+    <button class="copy-btn" type="button">复制 SQL</button>
+  </div>
+  <pre><code class="language-sql">SELECT *
+FROM products
+WHERE price &gt; (
+  SELECT AVG(price)
+  FROM products
+);</code></pre>
+  <figure class="screenshot" data-path="docs/screenshots/13-01.png">
+    <div class="shot-placeholder">
+      <strong>运行结果截图待上传</strong>
+      <span>docs/screenshots/13-01.png</span>
+    </div>
+    <img src="docs/screenshots/13-01.png" alt="13.1 查询价格高于平均价格的产品 运行结果截图" loading="lazy" onerror="this.style.display='none'; this.previousElementSibling.style.display='flex';" onload="this.previousElementSibling.style.display='none';">
+    <figcaption>截图路径：<code>docs/screenshots/13-01.png</code></figcaption>
+  </figure>
+</article><article class="sql-card" id="sql-13-02" data-title="13.2 查询下过订单的客户" data-section="13" data-tag="子查询 Subquery">
+  <div class="card-head">
+    <div>
+      <span class="badge">13.2</span>
+      <h3>查询下过订单的客户</h3>
+      
+    </div>
+    <button class="copy-btn" type="button">复制 SQL</button>
+  </div>
+  <pre><code class="language-sql">SELECT *
+FROM customers
+WHERE id IN (
+  SELECT customer_id
+  FROM orders
+);</code></pre>
+  <figure class="screenshot" data-path="docs/screenshots/13-02.png">
+    <div class="shot-placeholder">
+      <strong>运行结果截图待上传</strong>
+      <span>docs/screenshots/13-02.png</span>
+    </div>
+    <img src="docs/screenshots/13-02.png" alt="13.2 查询下过订单的客户 运行结果截图" loading="lazy" onerror="this.style.display='none'; this.previousElementSibling.style.display='flex';" onload="this.previousElementSibling.style.display='none';">
+    <figcaption>截图路径：<code>docs/screenshots/13-02.png</code></figcaption>
+  </figure>
+</article><article class="sql-card" id="sql-13-03" data-title="13.3 查询没有下过订单的客户" data-section="13" data-tag="子查询 Subquery">
+  <div class="card-head">
+    <div>
+      <span class="badge">13.3</span>
+      <h3>查询没有下过订单的客户</h3>
+      
+    </div>
+    <button class="copy-btn" type="button">复制 SQL</button>
+  </div>
+  <pre><code class="language-sql">SELECT *
+FROM customers
+WHERE id NOT IN (
+  SELECT customer_id
+  FROM orders
+);</code></pre>
+  <figure class="screenshot" data-path="docs/screenshots/13-03.png">
+    <div class="shot-placeholder">
+      <strong>运行结果截图待上传</strong>
+      <span>docs/screenshots/13-03.png</span>
+    </div>
+    <img src="docs/screenshots/13-03.png" alt="13.3 查询没有下过订单的客户 运行结果截图" loading="lazy" onerror="this.style.display='none'; this.previousElementSibling.style.display='flex';" onload="this.previousElementSibling.style.display='none';">
+    <figcaption>截图路径：<code>docs/screenshots/13-03.png</code></figcaption>
+  </figure>
+</article><section class="section-title" id="section-14">
+  <p>Section 14</p>
+  <h2>第 14 部分：CASE WHEN 条件判断</h2>
+</section><article class="sql-card" id="sql-14-01" data-title="14.1 根据价格给产品打标签" data-section="14" data-tag="CASE WHEN 条件判断">
+  <div class="card-head">
+    <div>
+      <span class="badge">14.1</span>
+      <h3>根据价格给产品打标签</h3>
+      
+    </div>
+    <button class="copy-btn" type="button">复制 SQL</button>
+  </div>
+  <pre><code class="language-sql">SELECT
+  name,
+  price,
+  CASE
+    WHEN price &gt;= 30 THEN &#x27;high&#x27;
+    WHEN price &gt;= 10 THEN &#x27;middle&#x27;
+    ELSE &#x27;low&#x27;
+  END AS price_level
+FROM products;</code></pre>
+  <figure class="screenshot" data-path="docs/screenshots/14-01.png">
+    <div class="shot-placeholder">
+      <strong>运行结果截图待上传</strong>
+      <span>docs/screenshots/14-01.png</span>
+    </div>
+    <img src="docs/screenshots/14-01.png" alt="14.1 根据价格给产品打标签 运行结果截图" loading="lazy" onerror="this.style.display='none'; this.previousElementSibling.style.display='flex';" onload="this.previousElementSibling.style.display='none';">
+    <figcaption>截图路径：<code>docs/screenshots/14-01.png</code></figcaption>
+  </figure>
+</article><article class="sql-card" id="sql-14-02" data-title="14.2 根据订单状态显示中文状态" data-section="14" data-tag="CASE WHEN 条件判断">
+  <div class="card-head">
+    <div>
+      <span class="badge">14.2</span>
+      <h3>根据订单状态显示中文状态</h3>
+      
+    </div>
+    <button class="copy-btn" type="button">复制 SQL</button>
+  </div>
+  <pre><code class="language-sql">SELECT
+  order_no,
+  status,
+  CASE status
+    WHEN &#x27;pending&#x27; THEN &#x27;待付款&#x27;
+    WHEN &#x27;paid&#x27; THEN &#x27;已付款&#x27;
+    WHEN &#x27;shipped&#x27; THEN &#x27;已发货&#x27;
+    WHEN &#x27;cancelled&#x27; THEN &#x27;已取消&#x27;
+    ELSE &#x27;未知&#x27;
+  END AS status_cn
+FROM orders;</code></pre>
+  <figure class="screenshot" data-path="docs/screenshots/14-02.png">
+    <div class="shot-placeholder">
+      <strong>运行结果截图待上传</strong>
+      <span>docs/screenshots/14-02.png</span>
+    </div>
+    <img src="docs/screenshots/14-02.png" alt="14.2 根据订单状态显示中文状态 运行结果截图" loading="lazy" onerror="this.style.display='none'; this.previousElementSibling.style.display='flex';" onload="this.previousElementSibling.style.display='none';">
+    <figcaption>截图路径：<code>docs/screenshots/14-02.png</code></figcaption>
+  </figure>
+</article><section class="section-title" id="section-15">
+  <p>Section 15</p>
+  <h2>第 15 部分：日期函数</h2>
+</section><article class="sql-card" id="sql-15-01" data-title="15.1 查询订单日期、年份、月份" data-section="15" data-tag="日期函数">
+  <div class="card-head">
+    <div>
+      <span class="badge">15.1</span>
+      <h3>查询订单日期、年份、月份</h3>
+      
+    </div>
+    <button class="copy-btn" type="button">复制 SQL</button>
+  </div>
+  <pre><code class="language-sql">SELECT
+  order_no,
+  order_date,
+  YEAR(order_date) AS order_year,
+  MONTH(order_date) AS order_month
+FROM orders;</code></pre>
+  <figure class="screenshot" data-path="docs/screenshots/15-01.png">
+    <div class="shot-placeholder">
+      <strong>运行结果截图待上传</strong>
+      <span>docs/screenshots/15-01.png</span>
+    </div>
+    <img src="docs/screenshots/15-01.png" alt="15.1 查询订单日期、年份、月份 运行结果截图" loading="lazy" onerror="this.style.display='none'; this.previousElementSibling.style.display='flex';" onload="this.previousElementSibling.style.display='none';">
+    <figcaption>截图路径：<code>docs/screenshots/15-01.png</code></figcaption>
+  </figure>
+</article><article class="sql-card" id="sql-15-02" data-title="15.2 按月份统计订单数量" data-section="15" data-tag="日期函数">
+  <div class="card-head">
+    <div>
+      <span class="badge">15.2</span>
+      <h3>按月份统计订单数量</h3>
+      
+    </div>
+    <button class="copy-btn" type="button">复制 SQL</button>
+  </div>
+  <pre><code class="language-sql">SELECT
+  DATE_FORMAT(order_date, &#x27;%Y-%m&#x27;) AS order_month,
+  COUNT(*) AS order_count
+FROM orders
+GROUP BY DATE_FORMAT(order_date, &#x27;%Y-%m&#x27;)
+ORDER BY order_month;</code></pre>
+  <figure class="screenshot" data-path="docs/screenshots/15-02.png">
+    <div class="shot-placeholder">
+      <strong>运行结果截图待上传</strong>
+      <span>docs/screenshots/15-02.png</span>
+    </div>
+    <img src="docs/screenshots/15-02.png" alt="15.2 按月份统计订单数量 运行结果截图" loading="lazy" onerror="this.style.display='none'; this.previousElementSibling.style.display='flex';" onload="this.previousElementSibling.style.display='none';">
+    <figcaption>截图路径：<code>docs/screenshots/15-02.png</code></figcaption>
+  </figure>
+</article><article class="sql-card" id="sql-15-03" data-title="15.3 查询最近 30 天内创建的客户" data-section="15" data-tag="日期函数">
+  <div class="card-head">
+    <div>
+      <span class="badge">15.3</span>
+      <h3>查询最近 30 天内创建的客户</h3>
+      
+    </div>
+    <button class="copy-btn" type="button">复制 SQL</button>
+  </div>
+  <pre><code class="language-sql">SELECT *
+FROM customers
+WHERE created_at &gt;= DATE_SUB(CURDATE(), INTERVAL 30 DAY);</code></pre>
+  <figure class="screenshot" data-path="docs/screenshots/15-03.png">
+    <div class="shot-placeholder">
+      <strong>运行结果截图待上传</strong>
+      <span>docs/screenshots/15-03.png</span>
+    </div>
+    <img src="docs/screenshots/15-03.png" alt="15.3 查询最近 30 天内创建的客户 运行结果截图" loading="lazy" onerror="this.style.display='none'; this.previousElementSibling.style.display='flex';" onload="this.previousElementSibling.style.display='none';">
+    <figcaption>截图路径：<code>docs/screenshots/15-03.png</code></figcaption>
+  </figure>
+</article><section class="section-title" id="section-16">
+  <p>Section 16</p>
+  <h2>第 16 部分：常用业务查询综合练习</h2>
+</section><article class="sql-card" id="sql-16-01" data-title="16.1 查询销售额最高的前 5 个产品" data-section="16" data-tag="常用业务查询综合练习">
+  <div class="card-head">
+    <div>
+      <span class="badge">16.1</span>
+      <h3>查询销售额最高的前 5 个产品</h3>
+      
+    </div>
+    <button class="copy-btn" type="button">复制 SQL</button>
+  </div>
+  <pre><code class="language-sql">SELECT
+  p.id,
+  p.name,
+  p.category,
+  SUM(oi.quantity) AS total_quantity,
+  SUM(oi.quantity * oi.unit_price) AS total_sales
+FROM products p
+INNER JOIN order_items oi ON p.id = oi.product_id
+INNER JOIN orders o ON oi.order_id = o.id
+WHERE o.status IN (&#x27;paid&#x27;, &#x27;shipped&#x27;)
+GROUP BY p.id, p.name, p.category
+ORDER BY total_sales DESC
+LIMIT 5;</code></pre>
+  <figure class="screenshot" data-path="docs/screenshots/16-01.png">
+    <div class="shot-placeholder">
+      <strong>运行结果截图待上传</strong>
+      <span>docs/screenshots/16-01.png</span>
+    </div>
+    <img src="docs/screenshots/16-01.png" alt="16.1 查询销售额最高的前 5 个产品 运行结果截图" loading="lazy" onerror="this.style.display='none'; this.previousElementSibling.style.display='flex';" onload="this.previousElementSibling.style.display='none';">
+    <figcaption>截图路径：<code>docs/screenshots/16-01.png</code></figcaption>
+  </figure>
+</article><article class="sql-card" id="sql-16-02" data-title="16.2 查询每个客户的累计消费金额" data-section="16" data-tag="常用业务查询综合练习">
+  <div class="card-head">
+    <div>
+      <span class="badge">16.2</span>
+      <h3>查询每个客户的累计消费金额</h3>
+      
+    </div>
+    <button class="copy-btn" type="button">复制 SQL</button>
+  </div>
+  <pre><code class="language-sql">SELECT
+  c.id,
+  c.name,
+  c.city,
+  COALESCE(SUM(oi.quantity * oi.unit_price), 0) AS total_spent
+FROM customers c
+LEFT JOIN orders o
+  ON c.id = o.customer_id
+  AND o.status IN (&#x27;paid&#x27;, &#x27;shipped&#x27;)
+LEFT JOIN order_items oi
+  ON o.id = oi.order_id
+GROUP BY c.id, c.name, c.city
+ORDER BY total_spent DESC;</code></pre>
+  <figure class="screenshot" data-path="docs/screenshots/16-02.png">
+    <div class="shot-placeholder">
+      <strong>运行结果截图待上传</strong>
+      <span>docs/screenshots/16-02.png</span>
+    </div>
+    <img src="docs/screenshots/16-02.png" alt="16.2 查询每个客户的累计消费金额 运行结果截图" loading="lazy" onerror="this.style.display='none'; this.previousElementSibling.style.display='flex';" onload="this.previousElementSibling.style.display='none';">
+    <figcaption>截图路径：<code>docs/screenshots/16-02.png</code></figcaption>
+  </figure>
+</article><article class="sql-card" id="sql-16-03" data-title="16.3 查询累计消费金额大于 500 的客户" data-section="16" data-tag="常用业务查询综合练习">
+  <div class="card-head">
+    <div>
+      <span class="badge">16.3</span>
+      <h3>查询累计消费金额大于 500 的客户</h3>
+      
+    </div>
+    <button class="copy-btn" type="button">复制 SQL</button>
+  </div>
+  <pre><code class="language-sql">SELECT
+  c.id,
+  c.name,
+  SUM(oi.quantity * oi.unit_price) AS total_spent
+FROM customers c
+INNER JOIN orders o ON c.id = o.customer_id
+INNER JOIN order_items oi ON o.id = oi.order_id
+WHERE o.status IN (&#x27;paid&#x27;, &#x27;shipped&#x27;)
+GROUP BY c.id, c.name
+HAVING SUM(oi.quantity * oi.unit_price) &gt; 500
+ORDER BY total_spent DESC;</code></pre>
+  <figure class="screenshot" data-path="docs/screenshots/16-03.png">
+    <div class="shot-placeholder">
+      <strong>运行结果截图待上传</strong>
+      <span>docs/screenshots/16-03.png</span>
+    </div>
+    <img src="docs/screenshots/16-03.png" alt="16.3 查询累计消费金额大于 500 的客户 运行结果截图" loading="lazy" onerror="this.style.display='none'; this.previousElementSibling.style.display='flex';" onload="this.previousElementSibling.style.display='none';">
+    <figcaption>截图路径：<code>docs/screenshots/16-03.png</code></figcaption>
+  </figure>
+</article><article class="sql-card" id="sql-16-04" data-title="16.4 查询每个城市的销售额" data-section="16" data-tag="常用业务查询综合练习">
+  <div class="card-head">
+    <div>
+      <span class="badge">16.4</span>
+      <h3>查询每个城市的销售额</h3>
+      
+    </div>
+    <button class="copy-btn" type="button">复制 SQL</button>
+  </div>
+  <pre><code class="language-sql">SELECT
+  c.city,
+  SUM(oi.quantity * oi.unit_price) AS city_sales
+FROM customers c
+INNER JOIN orders o ON c.id = o.customer_id
+INNER JOIN order_items oi ON o.id = oi.order_id
+WHERE o.status IN (&#x27;paid&#x27;, &#x27;shipped&#x27;)
+GROUP BY c.city
+ORDER BY city_sales DESC;</code></pre>
+  <figure class="screenshot" data-path="docs/screenshots/16-04.png">
+    <div class="shot-placeholder">
+      <strong>运行结果截图待上传</strong>
+      <span>docs/screenshots/16-04.png</span>
+    </div>
+    <img src="docs/screenshots/16-04.png" alt="16.4 查询每个城市的销售额 运行结果截图" loading="lazy" onerror="this.style.display='none'; this.previousElementSibling.style.display='flex';" onload="this.previousElementSibling.style.display='none';">
+    <figcaption>截图路径：<code>docs/screenshots/16-04.png</code></figcaption>
+  </figure>
+</article><article class="sql-card" id="sql-16-05" data-title="16.5 查询每个订单的产品种类数和总件数" data-section="16" data-tag="常用业务查询综合练习">
+  <div class="card-head">
+    <div>
+      <span class="badge">16.5</span>
+      <h3>查询每个订单的产品种类数和总件数</h3>
+      
+    </div>
+    <button class="copy-btn" type="button">复制 SQL</button>
+  </div>
+  <pre><code class="language-sql">SELECT
+  o.order_no,
+  COUNT(DISTINCT oi.product_id) AS product_type_count,
+  SUM(oi.quantity) AS total_quantity
+FROM orders o
+INNER JOIN order_items oi ON o.id = oi.order_id
+GROUP BY o.id, o.order_no
+ORDER BY total_quantity DESC;</code></pre>
+  <figure class="screenshot" data-path="docs/screenshots/16-05.png">
+    <div class="shot-placeholder">
+      <strong>运行结果截图待上传</strong>
+      <span>docs/screenshots/16-05.png</span>
+    </div>
+    <img src="docs/screenshots/16-05.png" alt="16.5 查询每个订单的产品种类数和总件数 运行结果截图" loading="lazy" onerror="this.style.display='none'; this.previousElementSibling.style.display='flex';" onload="this.previousElementSibling.style.display='none';">
+    <figcaption>截图路径：<code>docs/screenshots/16-05.png</code></figcaption>
+  </figure>
+</article><section class="section-title" id="section-17">
+  <p>Section 17</p>
+  <h2>第 17 部分：索引练习</h2>
+</section><article class="sql-card" id="sql-17-01" data-title="17.1 给订单日期添加普通索引" data-section="17" data-tag="索引练习">
+  <div class="card-head">
+    <div>
+      <span class="badge">17.1</span>
+      <h3>给订单日期添加普通索引</h3>
+      
+    </div>
+    <button class="copy-btn" type="button">复制 SQL</button>
+  </div>
+  <pre><code class="language-sql">CREATE INDEX idx_orders_order_date ON orders(order_date);</code></pre>
+  <figure class="screenshot" data-path="docs/screenshots/17-01.png">
+    <div class="shot-placeholder">
+      <strong>运行结果截图待上传</strong>
+      <span>docs/screenshots/17-01.png</span>
+    </div>
+    <img src="docs/screenshots/17-01.png" alt="17.1 给订单日期添加普通索引 运行结果截图" loading="lazy" onerror="this.style.display='none'; this.previousElementSibling.style.display='flex';" onload="this.previousElementSibling.style.display='none';">
+    <figcaption>截图路径：<code>docs/screenshots/17-01.png</code></figcaption>
+  </figure>
+</article><article class="sql-card" id="sql-17-02" data-title="17.2 给订单状态添加普通索引" data-section="17" data-tag="索引练习">
+  <div class="card-head">
+    <div>
+      <span class="badge">17.2</span>
+      <h3>给订单状态添加普通索引</h3>
+      
+    </div>
+    <button class="copy-btn" type="button">复制 SQL</button>
+  </div>
+  <pre><code class="language-sql">CREATE INDEX idx_orders_status ON orders(status);</code></pre>
+  <figure class="screenshot" data-path="docs/screenshots/17-02.png">
+    <div class="shot-placeholder">
+      <strong>运行结果截图待上传</strong>
+      <span>docs/screenshots/17-02.png</span>
+    </div>
+    <img src="docs/screenshots/17-02.png" alt="17.2 给订单状态添加普通索引 运行结果截图" loading="lazy" onerror="this.style.display='none'; this.previousElementSibling.style.display='flex';" onload="this.previousElementSibling.style.display='none';">
+    <figcaption>截图路径：<code>docs/screenshots/17-02.png</code></figcaption>
+  </figure>
+</article><article class="sql-card" id="sql-17-03" data-title="17.3 给产品分类添加普通索引" data-section="17" data-tag="索引练习">
+  <div class="card-head">
+    <div>
+      <span class="badge">17.3</span>
+      <h3>给产品分类添加普通索引</h3>
+      
+    </div>
+    <button class="copy-btn" type="button">复制 SQL</button>
+  </div>
+  <pre><code class="language-sql">CREATE INDEX idx_products_category ON products(category);</code></pre>
+  <figure class="screenshot" data-path="docs/screenshots/17-03.png">
+    <div class="shot-placeholder">
+      <strong>运行结果截图待上传</strong>
+      <span>docs/screenshots/17-03.png</span>
+    </div>
+    <img src="docs/screenshots/17-03.png" alt="17.3 给产品分类添加普通索引 运行结果截图" loading="lazy" onerror="this.style.display='none'; this.previousElementSibling.style.display='flex';" onload="this.previousElementSibling.style.display='none';">
+    <figcaption>截图路径：<code>docs/screenshots/17-03.png</code></figcaption>
+  </figure>
+</article><article class="sql-card" id="sql-17-04" data-title="17.4 使用 EXPLAIN 查看 SQL 执行计划" data-section="17" data-tag="索引练习">
+  <div class="card-head">
+    <div>
+      <span class="badge">17.4</span>
+      <h3>使用 EXPLAIN 查看 SQL 执行计划</h3>
+      
+    </div>
+    <button class="copy-btn" type="button">复制 SQL</button>
+  </div>
+  <pre><code class="language-sql">EXPLAIN
+SELECT *
+FROM orders
+WHERE status = &#x27;paid&#x27;
+ORDER BY order_date DESC;</code></pre>
+  <figure class="screenshot" data-path="docs/screenshots/17-04.png">
+    <div class="shot-placeholder">
+      <strong>运行结果截图待上传</strong>
+      <span>docs/screenshots/17-04.png</span>
+    </div>
+    <img src="docs/screenshots/17-04.png" alt="17.4 使用 EXPLAIN 查看 SQL 执行计划 运行结果截图" loading="lazy" onerror="this.style.display='none'; this.previousElementSibling.style.display='flex';" onload="this.previousElementSibling.style.display='none';">
+    <figcaption>截图路径：<code>docs/screenshots/17-04.png</code></figcaption>
+  </figure>
+</article><section class="section-title" id="section-18">
+  <p>Section 18</p>
+  <h2>第 18 部分：事务练习 Transaction</h2>
+</section><article class="sql-card" id="sql-18-01" data-title="18.1 事务练习：创建订单并扣减库存" data-section="18" data-tag="事务">
+  <div class="card-head">
+    <div>
+      <span class="badge">18.1</span>
+      <h3>事务练习：创建订单并扣减库存</h3>
+      <p class="desc">用事务一次完成新增订单、插入订单明细、扣减库存，最后 COMMIT 提交。</p>
+    </div>
+    <button class="copy-btn" type="button">复制 SQL</button>
+  </div>
+  <pre><code class="language-sql">-- 场景：创建订单，同时扣减库存
+
+START TRANSACTION;
+
+INSERT INTO orders (customer_id, order_no, status, order_date, note)
+VALUES (2, &#x27;SO20240601001&#x27;, &#x27;paid&#x27;, CURDATE(), &#x27;Transaction test order&#x27;);
+
+SET @new_order_id = LAST_INSERT_ID();
+
+INSERT INTO order_items (order_id, product_id, quantity, unit_price)
+VALUES
+(@new_order_id, 1, 2, 29.90),
+(@new_order_id, 8, 1, 6.50);
+
+UPDATE products
+SET stock = stock - 2
+WHERE id = 1;
+
+UPDATE products
+SET stock = stock - 1
+WHERE id = 8;
+
+COMMIT;</code></pre>
+  <figure class="screenshot" data-path="docs/screenshots/18-01.png">
+    <div class="shot-placeholder">
+      <strong>运行结果截图待上传</strong>
+      <span>docs/screenshots/18-01.png</span>
+    </div>
+    <img src="docs/screenshots/18-01.png" alt="18.1 事务练习：创建订单并扣减库存 运行结果截图" loading="lazy" onerror="this.style.display='none'; this.previousElementSibling.style.display='flex';" onload="this.previousElementSibling.style.display='none';">
+    <figcaption>截图路径：<code>docs/screenshots/18-01.png</code></figcaption>
+  </figure>
+</article><article class="sql-card" id="sql-18-02" data-title="18.2 查看事务执行后的新订单" data-section="18" data-tag="事务">
+  <div class="card-head">
+    <div>
+      <span class="badge">18.2</span>
+      <h3>查看事务执行后的新订单</h3>
+      <p class="desc">验证事务执行后订单、订单明细和产品信息是否正确关联。</p>
+    </div>
+    <button class="copy-btn" type="button">复制 SQL</button>
+  </div>
+  <pre><code class="language-sql">SELECT
+  o.order_no,
+  o.status,
+  p.name AS product_name,
+  oi.quantity,
+  oi.unit_price
+FROM orders o
+INNER JOIN order_items oi ON o.id = oi.order_id
+INNER JOIN products p ON oi.product_id = p.id
+WHERE o.order_no = &#x27;SO20240601001&#x27;;</code></pre>
+  <figure class="screenshot" data-path="docs/screenshots/18-02.png">
+    <div class="shot-placeholder">
+      <strong>运行结果截图待上传</strong>
+      <span>docs/screenshots/18-02.png</span>
+    </div>
+    <img src="docs/screenshots/18-02.png" alt="18.2 查看事务执行后的新订单 运行结果截图" loading="lazy" onerror="this.style.display='none'; this.previousElementSibling.style.display='flex';" onload="this.previousElementSibling.style.display='none';">
+    <figcaption>截图路径：<code>docs/screenshots/18-02.png</code></figcaption>
+  </figure>
+</article><section class="section-title" id="section-19">
+  <p>Section 19</p>
+  <h2>第 19 部分：视图 View</h2>
+</section><article class="sql-card" id="sql-19-01" data-title="19.1 创建订单汇总视图" data-section="19" data-tag="视图">
+  <div class="card-head">
+    <div>
+      <span class="badge">19.1</span>
+      <h3>创建订单汇总视图</h3>
+      <p class="desc">把订单、客户、订单金额汇总逻辑封装成视图，后续可以直接查询视图。</p>
+    </div>
+    <button class="copy-btn" type="button">复制 SQL</button>
+  </div>
+  <pre><code class="language-sql">DROP VIEW IF EXISTS v_order_summary;
+
+CREATE VIEW v_order_summary AS
+SELECT
+  o.id AS order_id,
+  o.order_no,
+  o.status,
+  o.order_date,
+  c.name AS customer_name,
+  c.city,
+  SUM(oi.quantity * oi.unit_price) AS order_total
+FROM orders o
+INNER JOIN customers c ON o.customer_id = c.id
+INNER JOIN order_items oi ON o.id = oi.order_id
+GROUP BY o.id, o.order_no, o.status, o.order_date, c.name, c.city;</code></pre>
+  <figure class="screenshot" data-path="docs/screenshots/19-01.png">
+    <div class="shot-placeholder">
+      <strong>运行结果截图待上传</strong>
+      <span>docs/screenshots/19-01.png</span>
+    </div>
+    <img src="docs/screenshots/19-01.png" alt="19.1 创建订单汇总视图 运行结果截图" loading="lazy" onerror="this.style.display='none'; this.previousElementSibling.style.display='flex';" onload="this.previousElementSibling.style.display='none';">
+    <figcaption>截图路径：<code>docs/screenshots/19-01.png</code></figcaption>
+  </figure>
+</article><article class="sql-card" id="sql-19-02" data-title="19.2 查询订单汇总视图" data-section="19" data-tag="视图">
+  <div class="card-head">
+    <div>
+      <span class="badge">19.2</span>
+      <h3>查询订单汇总视图</h3>
+      <p class="desc">像查询普通表一样查询视图。</p>
+    </div>
+    <button class="copy-btn" type="button">复制 SQL</button>
+  </div>
+  <pre><code class="language-sql">SELECT *
+FROM v_order_summary
+ORDER BY order_date DESC;</code></pre>
+  <figure class="screenshot" data-path="docs/screenshots/19-02.png">
+    <div class="shot-placeholder">
+      <strong>运行结果截图待上传</strong>
+      <span>docs/screenshots/19-02.png</span>
+    </div>
+    <img src="docs/screenshots/19-02.png" alt="19.2 查询订单汇总视图 运行结果截图" loading="lazy" onerror="this.style.display='none'; this.previousElementSibling.style.display='flex';" onload="this.previousElementSibling.style.display='none';">
+    <figcaption>截图路径：<code>docs/screenshots/19-02.png</code></figcaption>
+  </figure>
+</article>
+
+        <section class="section-title" id="section-20">
+          <p>Section 20</p>
+          <h2>第 20 部分：自己练习题</h2>
+        </section>
+        <section class="sql-card">
+          <div class="card-head">
+            <div>
+              <span class="badge">20</span>
+              <h3>自测练习题</h3>
+              <p class="desc">建议先自己写 SQL，再回到前面的示例中查找类似写法。</p>
+            </div>
+          </div>
+          <ol class="exercise-list">
+            <li>练习 1：查询所有 active 状态的产品</li><li>练习 2：查询价格在 10 到 30 之间的产品</li><li>练习 3：查询每个客户的订单数量</li><li>练习 4：查询所有 paid 订单的订单号、客户名、订单日期</li><li>练习 5：查询每个产品分类的产品数量和平均价格</li><li>练习 6：查询购买过 Composite Decking Board 的客户</li><li>练习 7：查询销售额最高的产品</li><li>练习 8：查询没有任何订单的客户</li><li>练习 9：查询订单金额大于 500 的订单</li><li>练习 10：查询每个城市的客户数量和销售额</li>
+          </ol>
+        </section>
+        <p class="footer-note">截图建议使用 PNG 格式，并保持文件名与 SQL 编号一致。</p>
+      </main>
+    </div>
+  </div>
+
+  <script>
+    const cards = Array.from(document.querySelectorAll('.sql-card[data-title]'));
+    document.querySelectorAll('.copy-btn').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const code = btn.closest('.sql-card').querySelector('pre code').innerText;
+        try {
+          await navigator.clipboard.writeText(code);
+          const old = btn.textContent;
+          btn.textContent = '已复制';
+          setTimeout(() => btn.textContent = old, 1200);
+        } catch (err) {
+          btn.textContent = '复制失败';
+          setTimeout(() => btn.textContent = '复制 SQL', 1200);
+        }
+      });
+    });
+
+    const search = document.getElementById('search');
+    search.addEventListener('input', () => {
+      const keyword = search.value.trim().toLowerCase();
+      cards.forEach(card => {
+        const haystack = (card.dataset.title + ' ' + card.dataset.tag + ' ' + card.innerText).toLowerCase();
+        card.style.display = !keyword || haystack.includes(keyword) ? '' : 'none';
+      });
+    });
+  </script>
+</body>
+</html>
